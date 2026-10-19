@@ -1,0 +1,123 @@
+<!doctype html>
+<html lang="fr">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width,initial-scale=1">
+<title>MultiTV</title>
+<style>
+  html,body{margin:0;height:100%;background:#000;overflow:hidden;cursor:none;font-family:sans-serif}
+  video{width:100%;height:100%;object-fit:contain;background:#000}
+  #msg{position:fixed;inset:0;display:flex;flex-direction:column;align-items:center;justify-content:center;color:#9aa;font-size:3vw;text-align:center}
+  #msg small{font-size:1.6vw;margin-top:1vw;opacity:.7}
+  #msg.hide{display:none}
+</style>
+</head>
+<body>
+<video id="v" autoplay muted playsinline></video>
+<div id="msg"><div id="name">MultiTV</div><small id="sub">Connexion…</small></div>
+<script src="/static/hls.min.js"></script>
+<script>
+(function(){
+  var v=document.getElementById('v'), msg=document.getElementById('msg');
+  var nameEl=document.getElementById('name'), sub=document.getElementById('sub');
+  var HLS_SRC='/hls/index.m3u8', id=null, ws=null, hls=null, mode=null, running=false;
+  var ms=null, sb=null, queue=[], lastT=-1, lastMove=Date.now();
+  try{id=localStorage.getItem('multitv_id');}catch(e){}
+  if(!id){id=Math.random().toString(36).slice(2,10)+Date.now().toString(36).slice(-4);
+    try{localStorage.setItem('multitv_id',id);}catch(e){}}
+
+  function show(t,s){msg.className='';sub.textContent=s||'';if(t)nameEl.textContent=t;}
+  function playing(){return !v.paused && v.readyState>2;}
+
+  /* ---------- arret propre des deux lecteurs ---------- */
+  function teardown(){
+    if(hls){hls.destroy();hls=null;}
+    sb=null; queue=[];
+    if(ms){try{if(ms.readyState==='open')ms.endOfStream();}catch(e){} ms=null;}
+    v.removeAttribute('src'); try{v.load();}catch(e){}
+  }
+
+  /* ---------- mode HLS (compatible, ~3 s de retard) ---------- */
+  function loadHls(){
+    teardown();
+    if(window.Hls && Hls.isSupported()){
+      hls=new Hls({liveSyncDurationCount:2,liveMaxLatencyDurationCount:4,maxBufferLength:6,
+                   manifestLoadingMaxRetry:Infinity,levelLoadingMaxRetry:Infinity,fragLoadingMaxRetry:Infinity});
+      hls.loadSource(HLS_SRC); hls.attachMedia(v);
+      hls.on(Hls.Events.ERROR,function(_,d){ if(d.fatal){show(null,'En attente du flux…');setTimeout(function(){if(mode==='hls'&&running)loadHls();},2000);} });
+    }else{ v.src=HLS_SRC; }
+    v.play&&v.play().catch(function(){});
+  }
+
+  /* ---------- mode faible latence : MP4 fragmente via WebSocket + MSE ---------- */
+  function startLive(codec){
+    teardown();
+    var type='video/mp4; codecs="'+codec+'"';
+    if(!window.MediaSource || !MediaSource.isTypeSupported(type)){
+      show('MultiTV','Cette TV ne gère pas le mode faible latence. Passez en mode HLS dans le tableau de bord.'); return; }
+    ms=new MediaSource(); v.src=URL.createObjectURL(ms);
+    ms.addEventListener('sourceopen',function(){
+      if(sb||!ms)return;
+      sb=ms.addSourceBuffer(type); sb.mode='sequence';
+      sb.addEventListener('updateend',pump); pump();
+    });
+  }
+  function pump(){
+    if(!sb||sb.updating||!queue.length)return;
+    try{ sb.appendBuffer(queue.shift()); }
+    catch(e){ if(e.name==='QuotaExceededError'){trim(true);} else {ws&&ws.close();} }
+    if(v.paused)v.play&&v.play().catch(function(){});
+  }
+  function trim(force){
+    if(!sb||sb.updating||!v.buffered.length)return;
+    var s=v.buffered.start(0);
+    if(v.currentTime-s>(force?1:3)){try{sb.remove(s,v.currentTime-0.5);}catch(e){}}
+  }
+  /* garde le retard minimal : accelere legerement, ou saute au direct si trop en retard */
+  setInterval(function(){
+    if(mode!=='live'||!v.buffered.length)return;
+    var lag=v.buffered.end(v.buffered.length-1)-v.currentTime;
+    if(lag>1.2)v.currentTime=v.buffered.end(v.buffered.length-1)-0.15;
+    else v.playbackRate=lag>0.5?1.08:1;
+    trim(false);
+    if(queue.length>120)ws&&ws.close();   // decodeur bloque : on se resynchronise
+  },500);
+
+  function connect(){
+    ws=new WebSocket((location.protocol==='https:'?'wss://':'ws://')+location.host+'/ws/tv');
+    ws.binaryType='arraybuffer';
+    ws.onopen=function(){ws.send(JSON.stringify({type:'hello',id:id,ua:navigator.userAgent}));};
+    ws.onmessage=function(e){
+      if(typeof e.data!=='string'){ queue.push(e.data); pump(); return; }
+      var d=JSON.parse(e.data);
+      if(d.type==='name'){nameEl.textContent=d.name||'MultiTV';}
+      else if(d.type==='mode'){
+        mode=d.mode; running=d.running;
+        if(!running){teardown();show(null,'En attente du flux…');}
+        else if(mode==='hls')loadHls();
+      }
+      else if(d.type==='init'){ startLive(d.codec); }
+      else if(d.type==='cmd'){
+        if(d.cmd==='reload')location.reload();
+        if(d.cmd==='mute')v.muted=true;
+        if(d.cmd==='unmute')v.muted=false;
+      }
+    };
+    ws.onclose=function(){setTimeout(connect,1500);};
+  }
+  v.addEventListener('playing',function(){msg.className='hide';});
+
+  setInterval(function(){
+    if(v.currentTime!==lastT){lastT=v.currentTime;lastMove=Date.now();}
+    if(ws&&ws.readyState===1)ws.send(JSON.stringify({type:'status',playing:playing()}));
+    if(running&&Date.now()-lastMove>8000){
+      lastMove=Date.now(); show(null,'Reconnexion…');
+      if(mode==='hls')loadHls(); else if(ws)ws.close();
+    }
+  },3000);
+
+  show('MultiTV','En attente du flux…'); connect();
+})();
+</script>
+</body>
+</html>

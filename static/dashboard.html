@@ -1,0 +1,194 @@
+<!doctype html>
+<html lang="fr">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width,initial-scale=1">
+<title>MultiTV</title>
+<style>
+  :root{--bg:#f6f7f9;--card:#fff;--fg:#1b1f24;--mut:#667;--line:#dde1e6;--acc:#2563eb;--ok:#16a34a;--bad:#dc2626}
+  @media (prefers-color-scheme:dark){:root{--bg:#111418;--card:#1a1f26;--fg:#e8ebef;--mut:#8b95a3;--line:#2b323c;--acc:#5b8def}}
+  *{box-sizing:border-box}
+  body{margin:0;background:var(--bg);color:var(--fg);font:15px system-ui,sans-serif}
+  main{max-width:960px;margin:0 auto;padding:20px 16px 40px}
+  h1{font-size:22px;margin:0 0 16px}
+  h2{font-size:15px;margin:0;color:var(--mut);text-transform:uppercase;letter-spacing:.04em}
+  .card{background:var(--card);border:1px solid var(--line);border-radius:10px;padding:16px;margin-bottom:16px}
+  .top{display:flex;justify-content:space-between;align-items:center;gap:12px;flex-wrap:wrap;margin-bottom:14px}
+  .row{display:flex;gap:12px;flex-wrap:wrap;align-items:end}
+  label.f{display:flex;flex-direction:column;font-size:12px;color:var(--mut);gap:4px}
+  select,input[type=number]{font:inherit;padding:7px 9px;border:1px solid var(--line);border-radius:6px;background:var(--bg);color:var(--fg);min-width:110px}
+  button{font:inherit;padding:8px 14px;border:1px solid var(--line);border-radius:6px;background:var(--card);color:var(--fg);cursor:pointer}
+  button.p{background:var(--acc);border-color:var(--acc);color:#fff}
+  button:disabled{opacity:.5;cursor:default}
+  .dot{display:inline-block;width:9px;height:9px;border-radius:50%;background:var(--mut);margin-right:6px}
+  .dot.on{background:var(--ok)} .dot.err{background:var(--bad)}
+  table{width:100%;border-collapse:collapse}
+  td,th{text-align:left;padding:10px 6px;border-top:1px solid var(--line);vertical-align:middle}
+  th{font-size:12px;color:var(--mut);border:0}
+  td.sub{color:var(--mut);font-size:13px}
+  td.act{text-align:right;white-space:nowrap}
+  input[type=checkbox]{width:17px;height:17px}
+  .err{color:var(--bad);font-size:13px;margin-top:6px;white-space:pre-wrap}
+  .empty{color:var(--mut);padding:10px 0}
+  #banner{position:sticky;top:0;z-index:9;display:none;padding:12px 16px;background:var(--bad);color:#fff;font-weight:600}
+  .hint{color:var(--mut);font-size:13px;margin:10px 0 0}
+</style>
+</head>
+<body>
+<div id="banner"></div>
+<main>
+  <h1>MultiTV</h1>
+
+  <div class="card">
+    <div class="top">
+      <h2><span class="dot" id="sdot"></span><span id="stxt">Diffusion arrêtée</span></h2>
+      <button id="tog">Arrêter tout</button>
+    </div>
+    <div class="row">
+      <label class="f">Préréglage<select id="preset"></select></label>
+      <label class="f">Hauteur (px)<input id="height" type="number" min="144" max="2160" step="2"></label>
+      <label class="f">Images/s<input id="fps" type="number" min="5" max="60"></label>
+      <label class="f">Débit (kb/s)<input id="bitrate" type="number" min="300" max="40000" step="100"></label>
+      <label class="f">Encodeur<select id="encoder"></select></label>
+      <button id="apply">Appliquer</button>
+    </div>
+    <div class="err" id="err"></div>
+  </div>
+
+  <div class="card">
+    <div class="top">
+      <h2>Ce qui est diffusé</h2>
+      <span id="srcnow" style="color:var(--mut);font-size:13px"></span>
+    </div>
+    <div class="row">
+      <button id="srcDesk">Tout l'écran</button>
+      <label class="f">Un écran<select id="mon"><option value="">— choisir —</option></select></label>
+      <label class="f">Une fenêtre<select id="win"><option value="">— choisir —</option></select></label>
+      <button id="srcZone">Tracer une zone à la souris</button>
+    </div>
+    <div class="row" style="margin-top:14px">
+      <button id="vddInstall">Installer l'écran virtuel</button>
+      <button id="vddExtend">Étendre l'affichage</button>
+      <button id="monRefresh">Actualiser les écrans</button>
+    </div>
+    <p class="hint" id="vddInfo">Écran virtuel : il apparaît dans Windows comme un 2e écran. Glissez-y des fenêtres : seul son contenu est envoyé aux TV.</p>
+    <p class="hint">On peut changer à tout moment, même pendant la diffusion : les TV suivent automatiquement (coupure d'environ 1 seconde).</p>
+  </div>
+
+  <div class="card">
+    <div class="top">
+      <h2>Appareils sur le réseau (<span id="cnt">0</span>)</h2>
+      <div class="row">
+        <button id="scan">Rechercher</button>
+        <button id="castSel" class="p" disabled>Diffuser la sélection</button>
+      </div>
+    </div>
+    <table>
+      <thead><tr><th><input type="checkbox" id="all"></th><th>Appareil</th><th>Type / modèle</th><th>IP</th><th>État</th><th></th></tr></thead>
+      <tbody id="devs"></tbody>
+    </table>
+    <div class="err" id="notice"></div>
+    <div class="empty" id="empty">Cliquez sur « Rechercher » pour trouver les TV connectées au réseau.</div>
+    <div class="row" style="margin-top:14px">
+      <label class="f">Ajouter une box par son adresse IP<input id="ip" type="text" placeholder="192.168.1.50" style="font:inherit;padding:7px 9px;border:1px solid var(--line);border-radius:6px;background:var(--bg);color:var(--fg);min-width:200px"></label>
+      <button id="addip">Ajouter</button>
+    </div>
+    <p class="hint" id="nets"></p>
+    <p class="hint">Cochez une ou plusieurs TV puis « Diffuser la sélection ». Elles reçoivent toutes le même écran. La TV doit être allumée et sur le même réseau que ce PC.</p>
+  </div>
+  <div class="card">
+    <div class="top"><h2>Vrai temps réel</h2></div>
+    <p class="hint" style="margin:0">Une TV qui reçoit un flux (DLNA ou Cast) en met plusieurs secondes en mémoire avant de l'afficher : c'est ce retard de 5 à 8 s, et MultiTV ne peut pas le supprimer de son côté.
+      Pour un retard d'environ 0,2 s, ouvrez cette adresse dans le <b>navigateur de la box</b> (même réseau que ce PC) : <code id="tvurl"></code></p>
+  </div>
+</main>
+<script>
+var $=function(i){return document.getElementById(i)}, ws, S=null, picked={};
+function banner(t){var b=$('banner'); b.textContent=t||''; b.style.display=t?'block':'none';}
+window.onerror=function(m){banner('Erreur dans la page : '+m+' — fermez MultiTV, relancez-le et rechargez la page.');};
+function send(o){
+  if(ws&&ws.readyState===1)ws.send(JSON.stringify(o));
+  else banner("MultiTV ne répond pas : la fenêtre noire de MultiTV est-elle toujours ouverte ? Relancez MultiTV.exe puis rechargez cette page.");
+}
+function connect(){
+  ws=new WebSocket('ws://'+location.host+'/ws/admin');
+  ws.onopen=function(){banner('');};
+  ws.onmessage=function(e){var d=JSON.parse(e.data); if(d.type==='windows')fillWins(d.list); else if(d.type==='monitors')fillMons(d); else render(d);};
+  ws.onclose=function(){banner('Connexion perdue avec MultiTV… la fenêtre noire de MultiTV doit rester ouverte. Reconnexion en cours.');setTimeout(connect,1500);};
+}
+function fill(sel,items){ if(sel.options.length)return; items.forEach(function(x){var o=document.createElement('option');o.value=o.textContent=x;sel.appendChild(o);}); }
+function fillMons(d){
+  var sel=$('mon'), cur=sel.value; sel.innerHTML='<option value="">— choisir —</option>';
+  d.list.forEach(function(m){var o=document.createElement('option');o.value=m.device;o.dataset.name=m.name;
+    o.textContent=m.name+' — '+m.w+'×'+m.h;sel.appendChild(o);});
+  sel.value=cur;
+  $('vddInfo').textContent=d.list.length>1?"Écrans détectés : "+d.list.length+". Choisissez l'écran à diffuser ; glissez-y vos fenêtres.":
+    d.vdd?"Écran virtuel installé : cliquez sur « Étendre l'affichage », puis « Actualiser les écrans ».":
+    "Un seul écran détecté. Cliquez sur « Installer l'écran virtuel » (Windows demandera une confirmation), puis « Étendre l'affichage ».";
+}
+function fillWins(list){
+  var sel=$('win'), cur=sel.value; sel.innerHTML='<option value="">— choisir —</option>';
+  list.forEach(function(t){var o=document.createElement('option');o.value=o.textContent=t;sel.appendChild(o);});
+  sel.value=cur;
+}
+function updSel(){
+  var n=Object.keys(picked).filter(function(k){return picked[k]}).length;
+  $('castSel').disabled=!n; $('castSel').textContent=n>1?'Diffuser vers '+n+' TV':'Diffuser la sélection';
+}
+function render(s){
+  S=s; var st=s.stream, c=st.config, active=s.devices.filter(function(d){return d.casting}).length;
+  fill($('encoder'),s.encoders); fill($('preset'),Object.keys(s.presets).concat(['personnalisé']));
+  $('sdot').className='dot '+(st.running?'on':st.error?'err':'');
+  $('stxt').textContent=st.running?('Diffusion en cours — '+active+' TV'):'Diffusion arrêtée';
+  $('tog').disabled=!st.running&&!active;
+  $('err').textContent=st.error;
+  var tag=document.activeElement.tagName;
+  if(tag!=='INPUT'&&tag!=='SELECT'){
+    $('height').value=c.height;$('fps').value=c.fps;$('bitrate').value=c.bitrate;$('encoder').value=c.encoder;
+    var m=Object.keys(s.presets).filter(function(k){var p=s.presets[k];return p.height==c.height&&p.fps==c.fps&&p.bitrate==c.bitrate;});
+    $('preset').value=m[0]||'personnalisé';
+  }
+  var src=c.source; $('srcnow').textContent=src.kind==='window'?'Fenêtre : '+src.title:
+    src.kind==='monitor'?(src.name||'Écran'):src.kind==='region'?'Zone '+src.w+'×'+src.h+' en ('+src.x+', '+src.y+')':"Tout l'écran";
+  $('tvurl').textContent=s.tv_url;
+  $('notice').textContent=s.notice||''; $('nets').textContent='Réseaux explorés : '+(s.networks.join(', ')||'aucun');
+  $('scan').disabled=s.scanning; $('scan').textContent=s.scanning?'Recherche…':'Rechercher';
+  $('cnt').textContent=s.devices.length;
+  $('empty').style.display=s.devices.length?'none':'';
+  if(!s.devices.length&&s.scanning)$('empty').textContent='Recherche des appareils…';
+  var tb=$('devs'); tb.innerHTML='';
+  s.devices.forEach(function(d){
+    var tr=document.createElement('tr');
+    tr.innerHTML='<td><input type="checkbox"></td><td></td><td class="sub"></td><td class="sub"></td><td></td><td class="act"></td>';
+    var cb=tr.querySelector('input'); cb.checked=!!picked[d.id]; cb.onchange=function(){picked[d.id]=cb.checked;updSel();};
+    tr.children[1].textContent=d.name;
+    tr.children[2].textContent=(d.kind==='cast'?'Google Cast':'DLNA')+(d.model?' · '+d.model:'');
+    tr.children[3].textContent=d.ip;
+    tr.children[4].innerHTML='<span class="dot '+(d.casting?'on':d.error?'err':'')+'"></span>';
+    tr.children[4].appendChild(document.createTextNode(d.casting?'Diffusion':d.error?d.error:'Prête'));
+    var b=document.createElement('button'); b.textContent=d.casting?'Arrêter':'Diffuser';
+    b.onclick=function(){send({type:d.casting?'stopcast':'cast',id:d.id});}; tr.children[5].appendChild(b);
+    tb.appendChild(tr);
+  });
+  updSel();
+}
+$('mon').onfocus=$('monRefresh').onclick=function(){send({type:'monitors'});};
+$('mon').onchange=function(){ if(this.value)send({type:'source',kind:'monitor',device:this.value,name:this.selectedOptions[0].dataset.name}); };
+$('vddInstall').onclick=function(){send({type:'installvdd'});};
+$('vddExtend').onclick=function(){send({type:'extend'});setTimeout(function(){send({type:'monitors'});},2500);};
+$('srcDesk').onclick=function(){send({type:'source',kind:'desktop'});};
+$('srcZone').onclick=function(){send({type:'pick'});};
+$('win').onfocus=function(){send({type:'windows'});};
+$('win').onmousedown=function(){send({type:'windows'});};
+$('win').onchange=function(){ if(this.value)send({type:'source',kind:'window',title:this.value}); };
+$('addip').onclick=function(){var v=$('ip').value.trim(); if(v)send({type:'addip',ip:v});};
+$('scan').onclick=function(){send({type:'scan'});};
+$('all').onchange=function(){ if(!S)return; S.devices.forEach(function(d){picked[d.id]=$('all').checked;}); render(S); };
+$('castSel').onclick=function(){ Object.keys(picked).forEach(function(id){ if(picked[id])send({type:'cast',id:id}); }); };
+$('tog').onclick=function(){ S.devices.forEach(function(d){if(d.casting)send({type:'stopcast',id:d.id});}); send({type:'stop'}); };
+$('apply').onclick=function(){send({type:'config',config:{height:+$('height').value,fps:+$('fps').value,bitrate:+$('bitrate').value,encoder:$('encoder').value,mode:S.stream.config.mode}});};
+$('preset').onchange=function(){var p=S.presets[this.value]; if(p){$('height').value=p.height;$('fps').value=p.fps;$('bitrate').value=p.bitrate;}};
+connect(); setTimeout(function(){send({type:'scan'});send({type:'monitors'});},600);
+</script>
+</body>
+</html>

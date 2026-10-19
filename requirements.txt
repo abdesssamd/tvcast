@@ -1,0 +1,5 @@
+aiohttp
+segno
+imageio-ffmpeg
+zeroconf
+pychromecast
