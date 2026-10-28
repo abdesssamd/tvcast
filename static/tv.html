@@ -77,11 +77,11 @@
   setInterval(function(){
     if(mode!=='live'||!v.buffered.length)return;
     var lag=v.buffered.end(v.buffered.length-1)-v.currentTime;
-    if(lag>1.2)v.currentTime=v.buffered.end(v.buffered.length-1)-0.15;
-    else v.playbackRate=lag>0.5?1.08:1;
+    if(lag>0.8)v.currentTime=v.buffered.end(v.buffered.length-1)-0.1;
+    else v.playbackRate=lag>0.3?1.12:1;
     trim(false);
     if(queue.length>120)ws&&ws.close();   // decodeur bloque : on se resynchronise
-  },500);
+  },250);
 
   function connect(){
     ws=new WebSocket((location.protocol==='https:'?'wss://':'ws://')+location.host+'/ws/tv');

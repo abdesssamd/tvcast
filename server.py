@@ -160,6 +160,8 @@ class Streamer:
                     if kind == b"moov":
                         self.init, self.codec, init = init, codec_of(init), b""
                         await hub.send_init()
+                        if hub.ts_clients:
+                            await remux.ensure()
                 elif kind == b"moof":
                     moof = box
                 elif kind == b"mdat" and moof:
@@ -234,7 +236,7 @@ class Hub:
             "presets": PRESETS, "encoders": list(ENCODERS), "scanning": self.scanning,
             "notice": self.notice, "networks": dlna.local_ips(),
             "tv_url": f"http://{local_ip()}:{PORT}/tv",
-            "devices": [{k: d.get(k, "") for k in ("id", "name", "maker", "model", "ip", "kind", "casting", "error")}
+            "devices": [{k: d.get(k, "") for k in ("id", "name", "maker", "model", "ip", "kind", "casting", "error", "via")}
                         for d in self.devices.values()],
             "tvs": [
                 {"id": i, "name": self.names.get(i, "TV " + i[:4]), "ip": t["ip"], "ua": t["ua"],
@@ -406,6 +408,10 @@ async def live_ts(request: web.Request):
     await resp.prepare(request)
     if request.method == "HEAD":
         return resp
+    for _ in range(100):         # la TV peut demander le flux avant que FFmpeg soit pret
+        if streamer.init or not streamer.running:
+            break
+        await asyncio.sleep(0.1)
     if streamer.running:
         await remux.ensure()
     q: asyncio.Queue = asyncio.Queue(300)
@@ -500,7 +506,12 @@ async def cast_to(dev_id: str):
                 await streamer.start()
         base = f"http://{local_ip(dev['ip'])}:{PORT}"
         if dev["kind"] == "cast":
-            await castdev.cast(dev, base + "/live.mp4")
+            try:        # lecteur temps reel ouvert sur la box (DashCast) ; sinon simple flux video
+                await castdev.cast_page(dev, base + "/tv")
+                dev["via"] = "temps réel"
+            except Exception:
+                await castdev.cast(dev, base + "/live.mp4")
+                dev["via"] = "flux vidéo (retard 3 à 7 s)"
         else:
             await dlna.cast(dev, base + "/live.ts")
         dev["casting"] = True

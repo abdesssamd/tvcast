@@ -5,190 +5,483 @@
 <meta name="viewport" content="width=device-width,initial-scale=1">
 <title>MultiTV</title>
 <style>
-  :root{--bg:#f6f7f9;--card:#fff;--fg:#1b1f24;--mut:#667;--line:#dde1e6;--acc:#2563eb;--ok:#16a34a;--bad:#dc2626}
-  @media (prefers-color-scheme:dark){:root{--bg:#111418;--card:#1a1f26;--fg:#e8ebef;--mut:#8b95a3;--line:#2b323c;--acc:#5b8def}}
+  :root{
+    --bg:#f3f4f8;--card:#ffffff;--card2:#f8f9fc;--fg:#161a23;--mut:#677084;--line:#e4e7ee;
+    --acc:#4f46e5;--acc-fg:#fff;--acc-soft:#eceafd;
+    --ok:#12a150;--ok-soft:#e3f6ea;--warn:#b45309;--warn-soft:#fdf1dc;--bad:#d92d3a;--bad-soft:#fde8ea;
+    --shadow:0 1px 2px rgba(20,24,40,.05),0 6px 18px rgba(20,24,40,.06);--r:14px;
+  }
+  @media (prefers-color-scheme:dark){:root{
+    --bg:#0e1117;--card:#161b24;--card2:#1b212c;--fg:#e9ecf3;--mut:#8d97ab;--line:#272e3b;
+    --acc:#7c83ff;--acc-fg:#0e1117;--acc-soft:#232650;
+    --ok:#3ccf7a;--ok-soft:#14301f;--warn:#f0b04a;--warn-soft:#352a12;--bad:#ff6b76;--bad-soft:#3a1a1e;
+    --shadow:0 1px 2px rgba(0,0,0,.3),0 8px 24px rgba(0,0,0,.25);
+  }}
   *{box-sizing:border-box}
-  body{margin:0;background:var(--bg);color:var(--fg);font:15px system-ui,sans-serif}
-  main{max-width:960px;margin:0 auto;padding:20px 16px 40px}
-  h1{font-size:22px;margin:0 0 16px}
-  h2{font-size:15px;margin:0;color:var(--mut);text-transform:uppercase;letter-spacing:.04em}
-  .card{background:var(--card);border:1px solid var(--line);border-radius:10px;padding:16px;margin-bottom:16px}
-  .top{display:flex;justify-content:space-between;align-items:center;gap:12px;flex-wrap:wrap;margin-bottom:14px}
-  .row{display:flex;gap:12px;flex-wrap:wrap;align-items:end}
-  label.f{display:flex;flex-direction:column;font-size:12px;color:var(--mut);gap:4px}
-  select,input[type=number]{font:inherit;padding:7px 9px;border:1px solid var(--line);border-radius:6px;background:var(--bg);color:var(--fg);min-width:110px}
-  button{font:inherit;padding:8px 14px;border:1px solid var(--line);border-radius:6px;background:var(--card);color:var(--fg);cursor:pointer}
-  button.p{background:var(--acc);border-color:var(--acc);color:#fff}
-  button:disabled{opacity:.5;cursor:default}
-  .dot{display:inline-block;width:9px;height:9px;border-radius:50%;background:var(--mut);margin-right:6px}
-  .dot.on{background:var(--ok)} .dot.err{background:var(--bad)}
-  table{width:100%;border-collapse:collapse}
-  td,th{text-align:left;padding:10px 6px;border-top:1px solid var(--line);vertical-align:middle}
-  th{font-size:12px;color:var(--mut);border:0}
-  td.sub{color:var(--mut);font-size:13px}
-  td.act{text-align:right;white-space:nowrap}
-  input[type=checkbox]{width:17px;height:17px}
-  .err{color:var(--bad);font-size:13px;margin-top:6px;white-space:pre-wrap}
-  .empty{color:var(--mut);padding:10px 0}
-  #banner{position:sticky;top:0;z-index:9;display:none;padding:12px 16px;background:var(--bad);color:#fff;font-weight:600}
-  .hint{color:var(--mut);font-size:13px;margin:10px 0 0}
+  html{color-scheme:light dark}
+  body{margin:0;background:var(--bg);color:var(--fg);font:15px/1.45 "Segoe UI",system-ui,-apple-system,sans-serif}
+  button,input,select{font:inherit;color:inherit}
+  .app{max-width:1200px;margin:0 auto;padding:0 20px 110px}
+
+  /* ---- en-tete ---- */
+  header{display:flex;align-items:center;gap:16px;padding:22px 0 18px;flex-wrap:wrap}
+  .logo{display:flex;align-items:center;gap:12px;font-weight:700;font-size:21px;letter-spacing:-.02em}
+  .logo i{width:38px;height:38px;border-radius:11px;background:linear-gradient(135deg,var(--acc),#a855f7);display:grid;place-items:center;color:#fff}
+  .logo svg{width:22px;height:22px}
+  .spacer{flex:1}
+  .pill{display:inline-flex;align-items:center;gap:8px;padding:8px 14px;border-radius:999px;background:var(--card);border:1px solid var(--line);font-weight:600;box-shadow:var(--shadow)}
+  .pill .dot{width:9px;height:9px;border-radius:50%;background:var(--mut)}
+  .pill.live .dot{background:var(--ok);box-shadow:0 0 0 0 var(--ok);animation:pulse 1.8s infinite}
+  .pill.bad .dot{background:var(--bad)}
+  @keyframes pulse{0%{box-shadow:0 0 0 0 rgba(18,161,80,.55)}70%{box-shadow:0 0 0 9px rgba(18,161,80,0)}100%{box-shadow:0 0 0 0 rgba(18,161,80,0)}}
+
+  /* ---- boutons ---- */
+  .btn{display:inline-flex;align-items:center;justify-content:center;gap:8px;padding:9px 16px;border-radius:10px;border:1px solid var(--line);background:var(--card);cursor:pointer;font-weight:600;transition:.15s;white-space:nowrap}
+  .btn:hover:not(:disabled){border-color:var(--acc);color:var(--acc)}
+  .btn:disabled{opacity:.45;cursor:not-allowed}
+  .btn.primary{background:var(--acc);border-color:var(--acc);color:var(--acc-fg)}
+  .btn.primary:hover:not(:disabled){filter:brightness(1.08);color:var(--acc-fg)}
+  .btn.danger{background:var(--bad-soft);border-color:transparent;color:var(--bad)}
+  .btn.danger:hover:not(:disabled){border-color:var(--bad);color:var(--bad)}
+  .btn.sm{padding:6px 12px;font-size:13.5px;border-radius:8px}
+  .btn svg{width:16px;height:16px}
+
+  /* ---- mise en page ---- */
+  .grid{display:grid;grid-template-columns:minmax(0,1.45fr) minmax(0,1fr);gap:20px;align-items:start}
+  @media (max-width:960px){.grid{grid-template-columns:1fr}}
+  .col{display:flex;flex-direction:column;gap:20px}
+  .card{background:var(--card);border:1px solid var(--line);border-radius:var(--r);box-shadow:var(--shadow);padding:20px}
+  .card h2{margin:0;font-size:16px;letter-spacing:-.01em}
+  .card .sub{color:var(--mut);font-size:13.5px;margin:2px 0 0}
+  .card-head{display:flex;align-items:flex-start;justify-content:space-between;gap:12px;flex-wrap:wrap;margin-bottom:16px}
+  .tools{display:flex;gap:8px;flex-wrap:wrap;align-items:center}
+
+  /* ---- messages ---- */
+  .callout{display:flex;gap:10px;padding:12px 14px;border-radius:11px;font-size:14px;margin-bottom:14px;background:var(--warn-soft);color:var(--warn)}
+  .callout.bad{background:var(--bad-soft);color:var(--bad)}
+  .callout.info{background:var(--acc-soft);color:var(--acc)}
+  .callout[hidden]{display:none}
+  #banner{position:sticky;top:0;z-index:30;display:none;padding:12px 18px;background:var(--bad);color:#fff;font-weight:600;text-align:center}
+
+  /* ---- appareils ---- */
+  .devices{display:grid;grid-template-columns:repeat(auto-fill,minmax(250px,1fr));gap:14px}
+  .dev{position:relative;border:1.5px solid var(--line);border-radius:13px;padding:16px;background:var(--card2);display:flex;flex-direction:column;gap:12px;transition:.15s}
+  .dev:hover{border-color:var(--acc)}
+  .dev.on{border-color:var(--ok);background:var(--ok-soft)}
+  .dev.sel{border-color:var(--acc);box-shadow:0 0 0 3px var(--acc-soft)}
+  .dev-top{display:flex;gap:12px;align-items:center;padding-right:26px}
+  .dev-ico{width:44px;height:44px;border-radius:12px;background:var(--acc-soft);color:var(--acc);display:grid;place-items:center;flex:none}
+  .dev.on .dev-ico{background:var(--ok);color:#fff}
+  .dev-ico svg{width:24px;height:24px}
+  .dev-name{font-weight:700;overflow:hidden;text-overflow:ellipsis;white-space:nowrap}
+  .dev-meta{color:var(--mut);font-size:13px;overflow:hidden;text-overflow:ellipsis;white-space:nowrap}
+  .dev-check{position:absolute;top:12px;right:12px;width:20px;height:20px;accent-color:var(--acc);cursor:pointer}
+  .dev-status{display:flex;align-items:center;gap:8px;font-size:13.5px;min-height:20px}
+  .dev-status .dot{width:8px;height:8px;border-radius:50%;background:var(--mut);flex:none}
+  .dev.on .dev-status .dot{background:var(--ok)}
+  .dev-status.err{color:var(--bad)} .dev-status.err .dot{background:var(--bad)}
+  .badge{display:inline-block;padding:2px 8px;border-radius:6px;background:var(--card);border:1px solid var(--line);font-size:11.5px;font-weight:700;color:var(--mut);margin-left:6px;vertical-align:middle}
+  .dev .btn{width:100%}
+  .empty{text-align:center;padding:36px 12px;color:var(--mut)}
+  .empty svg{width:48px;height:48px;opacity:.5;margin-bottom:8px}
+  .empty b{display:block;color:var(--fg);font-size:16px;margin-bottom:4px}
+  .spin{display:inline-block;width:15px;height:15px;border:2px solid var(--line);border-top-color:var(--acc);border-radius:50%;animation:rot .8s linear infinite;vertical-align:-3px;margin-right:6px}
+  @keyframes rot{to{transform:rotate(360deg)}}
+  .addip{display:flex;gap:8px;margin-top:16px;padding-top:16px;border-top:1px solid var(--line);flex-wrap:wrap}
+  .input{padding:9px 12px;border:1px solid var(--line);border-radius:10px;background:var(--card2);min-width:0}
+  .input:focus{outline:2px solid var(--acc-soft);border-color:var(--acc)}
+  .addip .input{flex:1;min-width:160px}
+  .foot{color:var(--mut);font-size:12.5px;margin-top:12px}
+
+  /* ---- source ---- */
+  .now{display:flex;align-items:center;gap:10px;padding:12px 14px;border-radius:11px;background:var(--acc-soft);color:var(--acc);font-weight:600;margin-bottom:14px}
+  .now svg{width:18px;height:18px;flex:none}
+  .seg{display:grid;grid-template-columns:repeat(3,1fr);gap:4px;padding:4px;border-radius:11px;background:var(--card2);border:1px solid var(--line);margin-bottom:14px}
+  .seg button{border:0;background:transparent;padding:8px 6px;border-radius:8px;font-weight:600;color:var(--mut);cursor:pointer}
+  .seg button.on{background:var(--card);color:var(--fg);box-shadow:0 1px 3px rgba(0,0,0,.12)}
+  .list{display:flex;flex-direction:column;gap:6px;max-height:260px;overflow:auto}
+  .item{display:flex;align-items:center;justify-content:space-between;gap:10px;padding:10px 12px;border-radius:10px;border:1.5px solid var(--line);background:var(--card2);cursor:pointer;text-align:left;width:100%}
+  .item:hover{border-color:var(--acc)}
+  .item.on{border-color:var(--acc);background:var(--acc-soft)}
+  .item span:first-child{overflow:hidden;text-overflow:ellipsis;white-space:nowrap}
+  .item small{color:var(--mut);flex:none}
+  .steps{margin:14px 0 0;padding:14px;border-radius:11px;background:var(--card2);border:1px dashed var(--line);font-size:13.5px}
+  .steps b{display:block;margin-bottom:6px}
+  .steps .tools{margin-top:10px}
+
+  /* ---- qualite ---- */
+  .chips{display:flex;gap:8px;flex-wrap:wrap}
+  .chip{padding:8px 14px;border-radius:999px;border:1.5px solid var(--line);background:var(--card2);cursor:pointer;font-weight:600}
+  .chip:hover{border-color:var(--acc)}
+  .chip.on{background:var(--acc);border-color:var(--acc);color:var(--acc-fg)}
+  details summary{cursor:pointer;color:var(--mut);font-weight:600;margin-top:14px;font-size:13.5px}
+  .form{display:grid;grid-template-columns:1fr 1fr;gap:12px;margin-top:12px}
+  .form label{display:flex;flex-direction:column;gap:4px;font-size:12.5px;color:var(--mut);font-weight:600}
+  .form .full{grid-column:1/-1}
+
+  /* ---- temps reel ---- */
+  code{background:var(--card2);border:1px solid var(--line);padding:3px 8px;border-radius:7px;font-size:13px;word-break:break-all}
+
+  /* ---- barre d'action ---- */
+  #bar{position:fixed;left:50%;bottom:20px;transform:translate(-50%,140%);z-index:20;display:flex;align-items:center;gap:14px;padding:12px 14px 12px 20px;border-radius:16px;background:var(--fg);color:var(--bg);box-shadow:0 12px 40px rgba(0,0,0,.35);transition:.25s}
+  #bar.show{transform:translate(-50%,0)}
+  #bar .btn{border-color:transparent}
+  #bar .link{background:none;border:0;color:inherit;opacity:.7;cursor:pointer;text-decoration:underline}
 </style>
 </head>
 <body>
 <div id="banner"></div>
-<main>
-  <h1>MultiTV</h1>
+<div class="app">
 
-  <div class="card">
-    <div class="top">
-      <h2><span class="dot" id="sdot"></span><span id="stxt">Diffusion arrêtée</span></h2>
-      <button id="tog">Arrêter tout</button>
+  <header>
+    <div class="logo">
+      <i><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><rect x="2" y="4" width="20" height="13" rx="2"/><path d="M8 21h8M12 17v4"/></svg></i>
+      MultiTV
     </div>
-    <div class="row">
-      <label class="f">Préréglage<select id="preset"></select></label>
-      <label class="f">Hauteur (px)<input id="height" type="number" min="144" max="2160" step="2"></label>
-      <label class="f">Images/s<input id="fps" type="number" min="5" max="60"></label>
-      <label class="f">Débit (kb/s)<input id="bitrate" type="number" min="300" max="40000" step="100"></label>
-      <label class="f">Encodeur<select id="encoder"></select></label>
-      <button id="apply">Appliquer</button>
-    </div>
-    <div class="err" id="err"></div>
-  </div>
+    <div class="spacer"></div>
+    <div class="pill" id="pill"><span class="dot"></span><span id="pillTxt">Arrêtée</span></div>
+    <button class="btn danger" id="stopAll" disabled>Arrêter tout</button>
+  </header>
 
-  <div class="card">
-    <div class="top">
-      <h2>Ce qui est diffusé</h2>
-      <span id="srcnow" style="color:var(--mut);font-size:13px"></span>
-    </div>
-    <div class="row">
-      <button id="srcDesk">Tout l'écran</button>
-      <label class="f">Un écran<select id="mon"><option value="">— choisir —</option></select></label>
-      <label class="f">Une fenêtre<select id="win"><option value="">— choisir —</option></select></label>
-      <button id="srcZone">Tracer une zone à la souris</button>
-    </div>
-    <div class="row" style="margin-top:14px">
-      <button id="vddInstall">Installer l'écran virtuel</button>
-      <button id="vddExtend">Étendre l'affichage</button>
-      <button id="monRefresh">Actualiser les écrans</button>
-    </div>
-    <p class="hint" id="vddInfo">Écran virtuel : il apparaît dans Windows comme un 2e écran. Glissez-y des fenêtres : seul son contenu est envoyé aux TV.</p>
-    <p class="hint">On peut changer à tout moment, même pendant la diffusion : les TV suivent automatiquement (coupure d'environ 1 seconde).</p>
-  </div>
+  <div class="callout bad" id="streamErr" hidden></div>
 
-  <div class="card">
-    <div class="top">
-      <h2>Appareils sur le réseau (<span id="cnt">0</span>)</h2>
-      <div class="row">
-        <button id="scan">Rechercher</button>
-        <button id="castSel" class="p" disabled>Diffuser la sélection</button>
-      </div>
+  <div class="grid">
+
+    <!-- ===== colonne gauche : appareils ===== -->
+    <div class="col">
+      <section class="card">
+        <div class="card-head">
+          <div>
+            <h2>Téléviseurs et box</h2>
+            <p class="sub" id="devSub">Sur votre réseau</p>
+          </div>
+          <div class="tools">
+            <button class="btn sm" id="selAll">Tout sélectionner</button>
+            <button class="btn primary sm" id="scan">Rechercher</button>
+          </div>
+        </div>
+        <div class="callout" id="notice" hidden></div>
+        <div class="devices" id="devs"></div>
+        <div class="empty" id="empty" hidden>
+          <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.6" stroke-linecap="round" stroke-linejoin="round"><rect x="2" y="4" width="20" height="13" rx="2"/><path d="M8 21h8M12 17v4"/></svg>
+          <b>Aucun appareil trouvé</b>
+          Allumez votre TV ou box (même réseau que ce PC), puis cliquez sur « Rechercher ».
+        </div>
+        <div class="addip">
+          <input class="input" id="ip" placeholder="Ajouter par adresse IP, ex. 192.168.1.50" inputmode="decimal">
+          <button class="btn" id="addip">Ajouter</button>
+        </div>
+        <p class="foot" id="nets"></p>
+      </section>
+
+      <section class="card">
+        <div class="card-head">
+          <div>
+            <h2>Vrai temps réel</h2>
+            <p class="sub">Une TV met plusieurs secondes de vidéo en mémoire quand on lui envoie un flux. Le lecteur web, lui, affiche presque instantanément.</p>
+          </div>
+        </div>
+        <p style="margin:0 0 10px">Sur une box Android TV, « Diffuser » l'ouvre automatiquement. Sinon, ouvrez cette adresse dans le navigateur de la box :</p>
+        <div class="tools"><code id="tvurl"></code><button class="btn sm" id="copyUrl">Copier</button></div>
+      </section>
     </div>
-    <table>
-      <thead><tr><th><input type="checkbox" id="all"></th><th>Appareil</th><th>Type / modèle</th><th>IP</th><th>État</th><th></th></tr></thead>
-      <tbody id="devs"></tbody>
-    </table>
-    <div class="err" id="notice"></div>
-    <div class="empty" id="empty">Cliquez sur « Rechercher » pour trouver les TV connectées au réseau.</div>
-    <div class="row" style="margin-top:14px">
-      <label class="f">Ajouter une box par son adresse IP<input id="ip" type="text" placeholder="192.168.1.50" style="font:inherit;padding:7px 9px;border:1px solid var(--line);border-radius:6px;background:var(--bg);color:var(--fg);min-width:200px"></label>
-      <button id="addip">Ajouter</button>
+
+    <!-- ===== colonne droite : source + qualite ===== -->
+    <div class="col">
+      <section class="card">
+        <div class="card-head"><div><h2>Ce qui est diffusé</h2><p class="sub">Modifiable à tout moment, même en direct.</p></div></div>
+        <div class="now">
+          <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><circle cx="12" cy="12" r="3"/><path d="M2 12s4-7 10-7 10 7 10 7-4 7-10 7S2 12 2 12z"/></svg>
+          <span id="srcnow">Tout l'écran</span>
+        </div>
+        <div class="seg" id="seg">
+          <button data-tab="screen">Écran</button>
+          <button data-tab="window">Fenêtre</button>
+          <button data-tab="region">Zone</button>
+        </div>
+
+        <div id="tab-screen">
+          <div class="list" id="monList"></div>
+          <div class="steps" id="vdd">
+            <b>Écran virtuel (comme « Étendre »)</b>
+            <span id="vddInfo"></span>
+            <div class="tools">
+              <button class="btn sm" id="vddInstall">Installer l'écran virtuel</button>
+              <button class="btn sm" id="vddExtend">Étendre l'affichage</button>
+              <button class="btn sm" id="monRefresh">Actualiser</button>
+            </div>
+          </div>
+        </div>
+
+        <div id="tab-window" hidden>
+          <div class="list" id="winList"></div>
+          <div class="tools" style="margin-top:10px"><button class="btn sm" id="winRefresh">Actualiser la liste</button></div>
+        </div>
+
+        <div id="tab-region" hidden>
+          <p style="margin:0 0 12px;color:var(--mut)">Un voile apparaît sur l'écran du PC : tracez le rectangle à diffuser avec la souris (Échap pour annuler).</p>
+          <button class="btn primary" id="srcZone">Tracer une zone à la souris</button>
+        </div>
+      </section>
+
+      <section class="card">
+        <div class="card-head"><div><h2>Qualité</h2><p class="sub" id="qSub"></p></div></div>
+        <div class="chips" id="chips"></div>
+        <details>
+          <summary>Réglages avancés</summary>
+          <div class="form">
+            <label>Hauteur (px)<input class="input" id="height" type="number" min="144" max="2160" step="2"></label>
+            <label>Images par seconde<input class="input" id="fps" type="number" min="5" max="60"></label>
+            <label>Débit (kb/s)<input class="input" id="bitrate" type="number" min="300" max="40000" step="100"></label>
+            <label>Encodeur<select class="input" id="encoder"></select></label>
+            <div class="full"><button class="btn" id="apply">Appliquer</button></div>
+          </div>
+        </details>
+      </section>
     </div>
-    <p class="hint" id="nets"></p>
-    <p class="hint">Cochez une ou plusieurs TV puis « Diffuser la sélection ». Elles reçoivent toutes le même écran. La TV doit être allumée et sur le même réseau que ce PC.</p>
   </div>
-  <div class="card">
-    <div class="top"><h2>Vrai temps réel</h2></div>
-    <p class="hint" style="margin:0">Une TV qui reçoit un flux (DLNA ou Cast) en met plusieurs secondes en mémoire avant de l'afficher : c'est ce retard de 5 à 8 s, et MultiTV ne peut pas le supprimer de son côté.
-      Pour un retard d'environ 0,2 s, ouvrez cette adresse dans le <b>navigateur de la box</b> (même réseau que ce PC) : <code id="tvurl"></code></p>
-  </div>
-</main>
+</div>
+
+<div id="bar">
+  <span id="barTxt"></span>
+  <button class="btn primary" id="castSel">Diffuser</button>
+  <button class="link" id="clearSel">Annuler</button>
+</div>
+
 <script>
-var $=function(i){return document.getElementById(i)}, ws, S=null, picked={};
-function banner(t){var b=$('banner'); b.textContent=t||''; b.style.display=t?'block':'none';}
-window.onerror=function(m){banner('Erreur dans la page : '+m+' — fermez MultiTV, relancez-le et rechargez la page.');};
-function send(o){
-  if(ws&&ws.readyState===1)ws.send(JSON.stringify(o));
+"use strict";
+const $ = (id) => document.getElementById(id);
+const ICON_TV = '<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><rect x="2" y="4" width="20" height="13" rx="2"/><path d="M8 21h8M12 17v4"/></svg>';
+const ICON_BOX = '<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><rect x="3" y="8" width="18" height="9" rx="2"/><path d="M7 12h.01M11 12h6M8 20h8"/></svg>';
+
+let ws = null, S = null, picked = new Set(), tab = null, userTab = false, wins = [], mons = [], vdd = false;
+
+function banner(text) {
+  const b = $("banner");
+  b.textContent = text || "";
+  b.style.display = text ? "block" : "none";
+}
+window.onerror = (m) => banner("Erreur dans la page : " + m + " — fermez MultiTV, relancez-le et rechargez la page (Ctrl+F5).");
+
+function send(o) {
+  if (ws && ws.readyState === 1) ws.send(JSON.stringify(o));
   else banner("MultiTV ne répond pas : la fenêtre noire de MultiTV est-elle toujours ouverte ? Relancez MultiTV.exe puis rechargez cette page.");
 }
-function connect(){
-  ws=new WebSocket('ws://'+location.host+'/ws/admin');
-  ws.onopen=function(){banner('');};
-  ws.onmessage=function(e){var d=JSON.parse(e.data); if(d.type==='windows')fillWins(d.list); else if(d.type==='monitors')fillMons(d); else render(d);};
-  ws.onclose=function(){banner('Connexion perdue avec MultiTV… la fenêtre noire de MultiTV doit rester ouverte. Reconnexion en cours.');setTimeout(connect,1500);};
+
+function connect() {
+  ws = new WebSocket("ws://" + location.host + "/ws/admin");
+  ws.onopen = () => banner("");
+  ws.onmessage = (e) => {
+    const d = JSON.parse(e.data);
+    if (d.type === "windows") { wins = d.list; renderSource(); }
+    else if (d.type === "monitors") { mons = d.list; vdd = d.vdd; renderSource(); }
+    else render(d);
+  };
+  ws.onclose = () => {
+    banner("Connexion perdue avec MultiTV… la fenêtre noire de MultiTV doit rester ouverte. Reconnexion en cours.");
+    setTimeout(connect, 1500);
+  };
 }
-function fill(sel,items){ if(sel.options.length)return; items.forEach(function(x){var o=document.createElement('option');o.value=o.textContent=x;sel.appendChild(o);}); }
-function fillMons(d){
-  var sel=$('mon'), cur=sel.value; sel.innerHTML='<option value="">— choisir —</option>';
-  d.list.forEach(function(m){var o=document.createElement('option');o.value=m.device;o.dataset.name=m.name;
-    o.textContent=m.name+' — '+m.w+'×'+m.h;sel.appendChild(o);});
-  sel.value=cur;
-  $('vddInfo').textContent=d.list.length>1?"Écrans détectés : "+d.list.length+". Choisissez l'écran à diffuser ; glissez-y vos fenêtres.":
-    d.vdd?"Écran virtuel installé : cliquez sur « Étendre l'affichage », puis « Actualiser les écrans ».":
-    "Un seul écran détecté. Cliquez sur « Installer l'écran virtuel » (Windows demandera une confirmation), puis « Étendre l'affichage ».";
+
+/* ---------------- rendu principal ---------------- */
+function srcLabel(src) {
+  if (src.kind === "window") return "Fenêtre : " + src.title;
+  if (src.kind === "monitor") return src.name || "Écran";
+  if (src.kind === "region") return "Zone " + src.w + "×" + src.h + " (" + src.x + ", " + src.y + ")";
+  return "Tout le bureau";
 }
-function fillWins(list){
-  var sel=$('win'), cur=sel.value; sel.innerHTML='<option value="">— choisir —</option>';
-  list.forEach(function(t){var o=document.createElement('option');o.value=o.textContent=t;sel.appendChild(o);});
-  sel.value=cur;
+
+function render(s) {
+  S = s;
+  const st = s.stream, active = s.devices.filter((d) => d.casting).length;
+
+  $("pill").className = "pill" + (st.running ? " live" : st.error ? " bad" : "");
+  $("pillTxt").textContent = st.running
+    ? "En direct · " + active + (active > 1 ? " appareils" : " appareil")
+    : "Arrêtée";
+  $("stopAll").disabled = !st.running && !active;
+
+  const err = $("streamErr");
+  err.hidden = !st.error;
+  err.textContent = st.error;
+
+  renderDevices();
+  renderSource();
+  renderQuality();
+
+  $("tvurl").textContent = s.tv_url;
+  $("nets").textContent = "Réseaux explorés : " + (s.networks.join(", ") || "aucun");
 }
-function updSel(){
-  var n=Object.keys(picked).filter(function(k){return picked[k]}).length;
-  $('castSel').disabled=!n; $('castSel').textContent=n>1?'Diffuser vers '+n+' TV':'Diffuser la sélection';
-}
-function render(s){
-  S=s; var st=s.stream, c=st.config, active=s.devices.filter(function(d){return d.casting}).length;
-  fill($('encoder'),s.encoders); fill($('preset'),Object.keys(s.presets).concat(['personnalisé']));
-  $('sdot').className='dot '+(st.running?'on':st.error?'err':'');
-  $('stxt').textContent=st.running?('Diffusion en cours — '+active+' TV'):'Diffusion arrêtée';
-  $('tog').disabled=!st.running&&!active;
-  $('err').textContent=st.error;
-  var tag=document.activeElement.tagName;
-  if(tag!=='INPUT'&&tag!=='SELECT'){
-    $('height').value=c.height;$('fps').value=c.fps;$('bitrate').value=c.bitrate;$('encoder').value=c.encoder;
-    var m=Object.keys(s.presets).filter(function(k){var p=s.presets[k];return p.height==c.height&&p.fps==c.fps&&p.bitrate==c.bitrate;});
-    $('preset').value=m[0]||'personnalisé';
-  }
-  var src=c.source; $('srcnow').textContent=src.kind==='window'?'Fenêtre : '+src.title:
-    src.kind==='monitor'?(src.name||'Écran'):src.kind==='region'?'Zone '+src.w+'×'+src.h+' en ('+src.x+', '+src.y+')':"Tout l'écran";
-  $('tvurl').textContent=s.tv_url;
-  $('notice').textContent=s.notice||''; $('nets').textContent='Réseaux explorés : '+(s.networks.join(', ')||'aucun');
-  $('scan').disabled=s.scanning; $('scan').textContent=s.scanning?'Recherche…':'Rechercher';
-  $('cnt').textContent=s.devices.length;
-  $('empty').style.display=s.devices.length?'none':'';
-  if(!s.devices.length&&s.scanning)$('empty').textContent='Recherche des appareils…';
-  var tb=$('devs'); tb.innerHTML='';
-  s.devices.forEach(function(d){
-    var tr=document.createElement('tr');
-    tr.innerHTML='<td><input type="checkbox"></td><td></td><td class="sub"></td><td class="sub"></td><td></td><td class="act"></td>';
-    var cb=tr.querySelector('input'); cb.checked=!!picked[d.id]; cb.onchange=function(){picked[d.id]=cb.checked;updSel();};
-    tr.children[1].textContent=d.name;
-    tr.children[2].textContent=(d.kind==='cast'?'Google Cast':'DLNA')+(d.model?' · '+d.model:'');
-    tr.children[3].textContent=d.ip;
-    tr.children[4].innerHTML='<span class="dot '+(d.casting?'on':d.error?'err':'')+'"></span>';
-    tr.children[4].appendChild(document.createTextNode(d.casting?'Diffusion':d.error?d.error:'Prête'));
-    var b=document.createElement('button'); b.textContent=d.casting?'Arrêter':'Diffuser';
-    b.onclick=function(){send({type:d.casting?'stopcast':'cast',id:d.id});}; tr.children[5].appendChild(b);
-    tb.appendChild(tr);
+
+function renderDevices() {
+  const s = S, box = $("devs");
+  box.textContent = "";
+  const n = $("notice");
+  n.hidden = !s.notice;
+  n.textContent = s.notice || "";
+  $("scan").disabled = s.scanning;
+  $("scan").innerHTML = s.scanning ? '<span class="spin"></span>Recherche…' : "Rechercher";
+  $("devSub").textContent = s.devices.length
+    ? s.devices.length + (s.devices.length > 1 ? " appareils trouvés" : " appareil trouvé") + " sur votre réseau"
+    : "Sur votre réseau";
+  $("empty").hidden = s.devices.length > 0 || s.scanning;
+  $("selAll").hidden = s.devices.length < 2;
+
+  s.devices.forEach((d) => {
+    const card = document.createElement("div");
+    card.className = "dev" + (d.casting ? " on" : "") + (picked.has(d.id) ? " sel" : "");
+
+    const top = document.createElement("div");
+    top.className = "dev-top";
+    const ico = document.createElement("div");
+    ico.className = "dev-ico";
+    ico.innerHTML = d.kind === "cast" ? ICON_TV : ICON_BOX;
+    const info = document.createElement("div");
+    info.style.minWidth = "0";
+    const name = document.createElement("div");
+    name.className = "dev-name";
+    name.textContent = d.name;
+    const badge = document.createElement("span");
+    badge.className = "badge";
+    badge.textContent = d.kind === "cast" ? "Cast" : "DLNA";
+    name.appendChild(badge);
+    const meta = document.createElement("div");
+    meta.className = "dev-meta";
+    meta.textContent = [d.model, d.ip].filter(Boolean).join(" · ");
+    info.append(name, meta);
+    top.append(ico, info);
+
+    const cb = document.createElement("input");
+    cb.type = "checkbox";
+    cb.className = "dev-check";
+    cb.checked = picked.has(d.id);
+    cb.title = "Sélectionner";
+    cb.onchange = () => { cb.checked ? picked.add(d.id) : picked.delete(d.id); renderDevices(); };
+
+    const status = document.createElement("div");
+    status.className = "dev-status" + (d.error && !d.casting ? " err" : "");
+    const dot = document.createElement("span");
+    dot.className = "dot";
+    const txt = document.createElement("span");
+    txt.textContent = d.casting ? "Diffusion en cours" + (d.via ? " — " + d.via : "") : (d.error || "Prête");
+    status.append(dot, txt);
+
+    const btn = document.createElement("button");
+    btn.className = "btn " + (d.casting ? "danger" : "primary");
+    btn.textContent = d.casting ? "Arrêter" : "Diffuser";
+    btn.onclick = () => send({ type: d.casting ? "stopcast" : "cast", id: d.id });
+
+    card.append(cb, top, status, btn);
+    box.appendChild(card);
   });
-  updSel();
+
+  const n2 = picked.size;
+  $("bar").className = n2 ? "show" : "";
+  $("barTxt").textContent = n2 + (n2 > 1 ? " appareils sélectionnés" : " appareil sélectionné");
+  $("castSel").textContent = n2 > 1 ? "Diffuser vers " + n2 + " TV" : "Diffuser";
 }
-$('mon').onfocus=$('monRefresh').onclick=function(){send({type:'monitors'});};
-$('mon').onchange=function(){ if(this.value)send({type:'source',kind:'monitor',device:this.value,name:this.selectedOptions[0].dataset.name}); };
-$('vddInstall').onclick=function(){send({type:'installvdd'});};
-$('vddExtend').onclick=function(){send({type:'extend'});setTimeout(function(){send({type:'monitors'});},2500);};
-$('srcDesk').onclick=function(){send({type:'source',kind:'desktop'});};
-$('srcZone').onclick=function(){send({type:'pick'});};
-$('win').onfocus=function(){send({type:'windows'});};
-$('win').onmousedown=function(){send({type:'windows'});};
-$('win').onchange=function(){ if(this.value)send({type:'source',kind:'window',title:this.value}); };
-$('addip').onclick=function(){var v=$('ip').value.trim(); if(v)send({type:'addip',ip:v});};
-$('scan').onclick=function(){send({type:'scan'});};
-$('all').onchange=function(){ if(!S)return; S.devices.forEach(function(d){picked[d.id]=$('all').checked;}); render(S); };
-$('castSel').onclick=function(){ Object.keys(picked).forEach(function(id){ if(picked[id])send({type:'cast',id:id}); }); };
-$('tog').onclick=function(){ S.devices.forEach(function(d){if(d.casting)send({type:'stopcast',id:d.id});}); send({type:'stop'}); };
-$('apply').onclick=function(){send({type:'config',config:{height:+$('height').value,fps:+$('fps').value,bitrate:+$('bitrate').value,encoder:$('encoder').value,mode:S.stream.config.mode}});};
-$('preset').onchange=function(){var p=S.presets[this.value]; if(p){$('height').value=p.height;$('fps').value=p.fps;$('bitrate').value=p.bitrate;}};
-connect(); setTimeout(function(){send({type:'scan'});send({type:'monitors'});},600);
+
+function item(label, small, on, onclick) {
+  const b = document.createElement("button");
+  b.className = "item" + (on ? " on" : "");
+  const a = document.createElement("span");
+  a.textContent = label;
+  const c = document.createElement("small");
+  c.textContent = small || "";
+  b.append(a, c);
+  b.onclick = onclick;
+  return b;
+}
+
+function renderSource() {
+  if (!S) return;
+  const src = S.stream.config.source;
+  $("srcnow").textContent = srcLabel(src);
+  if (!userTab) tab = src.kind === "window" ? "window" : src.kind === "region" ? "region" : "screen";
+  if (!tab) tab = "screen";
+
+  document.querySelectorAll("#seg button").forEach((b) => b.classList.toggle("on", b.dataset.tab === tab));
+  ["screen", "window", "region"].forEach((t) => { $("tab-" + t).hidden = t !== tab; });
+
+  const ml = $("monList");
+  ml.textContent = "";
+  ml.appendChild(item("Tout le bureau", "tous les écrans", src.kind === "desktop", () => send({ type: "source", kind: "desktop" })));
+  mons.forEach((m) => ml.appendChild(item(m.name, m.w + "×" + m.h,
+    src.kind === "monitor" && src.device === m.device,
+    () => send({ type: "source", kind: "monitor", device: m.device, name: m.name }))));
+
+  $("vddInfo").textContent = mons.length > 1
+    ? mons.length + " écrans détectés. Choisissez celui à diffuser, puis glissez-y vos fenêtres."
+    : vdd
+      ? "Écran virtuel installé : cliquez sur « Étendre l'affichage », puis « Actualiser »."
+      : "Un seul écran détecté. Installez un écran virtuel : Windows le voit comme un 2e écran, vous y glissez ce que vous voulez montrer, le reste de votre PC reste privé.";
+
+  const wl = $("winList");
+  wl.textContent = "";
+  if (!wins.length) {
+    const p = document.createElement("div");
+    p.className = "empty";
+    p.style.padding = "16px";
+    p.textContent = "Aucune fenêtre listée. Cliquez sur « Actualiser la liste ».";
+    wl.appendChild(p);
+  }
+  wins.forEach((t) => wl.appendChild(item(t, "", src.kind === "window" && src.title === t,
+    () => send({ type: "source", kind: "window", title: t }))));
+}
+
+function renderQuality() {
+  const s = S, c = s.stream.config;
+  $("qSub").textContent = c.height + "p · " + c.fps + " images/s · " + (c.bitrate / 1000).toFixed(1) + " Mb/s";
+  const box = $("chips");
+  box.textContent = "";
+  Object.keys(s.presets).forEach((k) => {
+    const p = s.presets[k];
+    const on = p.height == c.height && p.fps == c.fps && p.bitrate == c.bitrate;
+    const b = document.createElement("button");
+    b.className = "chip" + (on ? " on" : "");
+    b.textContent = k;
+    b.onclick = () => send({ type: "config", config: { height: p.height, fps: p.fps, bitrate: p.bitrate, encoder: c.encoder, mode: c.mode } });
+    box.appendChild(b);
+  });
+  const tag = document.activeElement && document.activeElement.tagName;
+  if (tag !== "INPUT" && tag !== "SELECT") {
+    $("height").value = c.height; $("fps").value = c.fps; $("bitrate").value = c.bitrate;
+    const sel = $("encoder");
+    if (!sel.options.length) s.encoders.forEach((e) => { const o = document.createElement("option"); o.value = o.textContent = e; sel.appendChild(o); });
+    sel.value = c.encoder;
+  }
+}
+
+/* ---------------- actions ---------------- */
+$("scan").onclick = () => send({ type: "scan" });
+$("addip").onclick = () => { const v = $("ip").value.trim(); if (v) send({ type: "addip", ip: v }); };
+$("ip").onkeydown = (e) => { if (e.key === "Enter") $("addip").click(); };
+$("stopAll").onclick = () => { S.devices.forEach((d) => { if (d.casting) send({ type: "stopcast", id: d.id }); }); send({ type: "stop" }); };
+$("castSel").onclick = () => { picked.forEach((id) => send({ type: "cast", id })); picked.clear(); renderDevices(); };
+$("clearSel").onclick = () => { picked.clear(); renderDevices(); };
+$("selAll").onclick = () => { S.devices.forEach((d) => picked.add(d.id)); renderDevices(); };
+$("seg").onclick = (e) => {
+  const b = e.target.closest("button");
+  if (!b) return;
+  tab = b.dataset.tab; userTab = true;
+  if (tab === "window") send({ type: "windows" });
+  renderSource();
+};
+$("srcZone").onclick = () => send({ type: "pick" });
+$("monRefresh").onclick = () => send({ type: "monitors" });
+$("winRefresh").onclick = () => send({ type: "windows" });
+$("vddInstall").onclick = () => send({ type: "installvdd" });
+$("vddExtend").onclick = () => { send({ type: "extend" }); setTimeout(() => send({ type: "monitors" }), 2500); };
+$("apply").onclick = () => send({ type: "config", config: {
+  height: +$("height").value, fps: +$("fps").value, bitrate: +$("bitrate").value,
+  encoder: $("encoder").value, mode: S.stream.config.mode } });
+$("copyUrl").onclick = () => { try { navigator.clipboard.writeText($("tvurl").textContent); $("copyUrl").textContent = "Copié"; setTimeout(() => { $("copyUrl").textContent = "Copier"; }, 1500); } catch (e) {} };
+
+/* la liste des fenêtres se rafraîchit toute seule quand son onglet est ouvert */
+setInterval(() => { if (tab === "window" && ws && ws.readyState === 1) send({ type: "windows" }); }, 6000);
+
+connect();
+setTimeout(() => { send({ type: "scan" }); send({ type: "monitors" }); send({ type: "windows" }); }, 600);
 </script>
 </body>
 </html>
